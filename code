@@ -1,0 +1,178 @@
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# Create a campus map as a weighted graph
+G = nx.Graph()
+
+# Add nodes (locations)
+locations = ['A', 'B', 'C', 'D', 'E', 'F']
+G.add_nodes_from(locations)
+
+# Add edges (paths) with weights (distances or times)
+G.add_weighted_edges_from([
+    ('A', 'B', 4),
+    ('A', 'C', 2),
+    ('B', 'C', 1),
+    ('B', 'D', 5),
+    ('C', 'D', 8),
+    ('C', 'E', 10),
+    ('D', 'E', 2),
+    ('D', 'F', 6),
+    ('E', 'F', 3)
+])
+
+# Heuristic values for A* (assumed straight-line distances to destination 'F')
+heuristics = {
+    'A': 7,
+    'B': 6,
+    'C': 5,
+    'D': 3,
+    'E': 1,
+    'F': 0
+}
+
+# Map node labels to actual campus location names
+location_names = {
+    'A': 'Main Gate',
+    'B': 'Library',
+    'C': 'Cafeteria',
+    'D': 'Computer Lab',
+    'E': 'Lecture Hall',
+    'F': 'Admin Office'
+}
+
+def astar_search(graph, start, goal, h):
+    from queue import PriorityQueue
+
+    open_set = PriorityQueue()
+    open_set.put((0, start))
+
+    came_from = {}
+    g_score = {node: float('inf') for node in graph.nodes}
+    g_score[start] = 0
+
+    while not open_set.empty():
+        _, current = open_set.get()
+
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            path.append(start)
+            return path[::-1]
+
+        for neighbor in graph.neighbors(current):
+            tentative_g_score = g_score[current] + graph[current][neighbor]['weight']
+
+            if tentative_g_score < g_score[neighbor]:
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g_score
+                f_score = tentative_g_score + h[neighbor]
+                open_set.put((f_score, neighbor))
+
+    return None
+
+def dijkstra_search(graph, start, goal):
+    try:
+        path = nx.dijkstra_path(graph, start, goal)
+        return path
+    except nx.NetworkXNoPath:
+        return None
+
+def print_directions(path, graph, names):
+    print("Step-by-step directions:")
+    for i in range(len(path) - 1):
+        src = path[i]
+        dest = path[i+1]
+        dist = graph[src][dest]['weight']
+        print(f" - Walk from {names[src]} to {names[dest]} ({dist} units)")
+
+def get_valid_location(prompt):
+    while True:
+        loc = input(prompt).upper()
+        if loc in locations:
+            return loc
+        else:
+            print("Invalid location. Please enter a letter from A to F.")
+
+def visualize_graph(graph, path=None):
+    plt.figure(figsize=(8,6))
+    pos = nx.spring_layout(graph, seed=42)  # positions for all nodes
+
+    # Draw all nodes
+    nx.draw_networkx_nodes(graph, pos, node_size=700, node_color='lightblue')
+
+    # Draw all edges
+    nx.draw_networkx_edges(graph, pos, width=1)
+
+    # Draw edge labels (weights)
+    edge_labels = nx.get_edge_attributes(graph, 'weight')
+    nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels)
+
+    # Draw node labels (campus location names)
+    labels = {node: location_names[node] for node in graph.nodes()}
+    nx.draw_networkx_labels(graph, pos, labels, font_size=10)
+
+    # Highlight the path if provided
+    if path:
+        # Create list of edge tuples in path
+        path_edges = list(zip(path, path[1:]))
+
+        nx.draw_networkx_edges(graph, pos,
+                               edgelist=path_edges,
+                               width=4,
+                               edge_color='red')
+
+        nx.draw_networkx_nodes(graph, pos,
+                               nodelist=path,
+                               node_size=700,
+                               node_color='orange')
+
+    plt.title("Campus Navigation Graph")
+    plt.axis('off')
+    plt.show()
+
+def main():
+    print("Available Locations:")
+    for key, value in location_names.items():
+        print(f"{key}: {value}")
+    print()
+
+    while True:
+        start = get_valid_location("Enter the starting location (A-F): ")
+        goal = get_valid_location("Enter the destination location (A-F): ")
+
+        if start == goal:
+            print("You are already at the destination!")
+        else:
+            astar_path = astar_search(G, start, goal, heuristics)
+            dijkstra_path = dijkstra_search(G, start, goal)
+
+            if astar_path:
+                astar_names = [location_names[node] for node in astar_path]
+                print("\n📍 A* Path:")
+                print(" → ".join(astar_names))
+                print_directions(astar_path, G, location_names)
+                print("\nVisualizing A* path...")
+                visualize_graph(G, astar_path)
+            else:
+                print("No path found with A*.")
+
+            if dijkstra_path:
+                dijkstra_names = [location_names[node] for node in dijkstra_path]
+                print("\n📍 Dijkstra's Path:")
+                print(" → ".join(dijkstra_names))
+                print_directions(dijkstra_path, G, location_names)
+                print("\nVisualizing Dijkstra's path...")
+                visualize_graph(G, dijkstra_path)
+            else:
+                print("No path found with Dijkstra.")
+
+        again = input("\nDo you want to find another route? (y/n): ").lower()
+        if again != 'y':
+            print("Goodbye!")
+            break
+
+if __name__ == "__main__":
+    main()
