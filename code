@@ -151,7 +151,7 @@ def main():
 
             if astar_path:
                 astar_names = [location_names[node] for node in astar_path]
-                print("\n📍 A* Path:")
+                print("\n A* Path:")
                 print(" → ".join(astar_names))
                 print_directions(astar_path, G, location_names)
                 print("\nVisualizing A* path...")
@@ -161,7 +161,7 @@ def main():
 
             if dijkstra_path:
                 dijkstra_names = [location_names[node] for node in dijkstra_path]
-                print("\n📍 Dijkstra's Path:")
+                print("\n Dijkstra's Path:")
                 print(" → ".join(dijkstra_names))
                 print_directions(dijkstra_path, G, location_names)
                 print("\nVisualizing Dijkstra's path...")
